@@ -63,6 +63,11 @@ mount -o bind /sys "$ROOT/sys"
 # Prevent host locale from leaking into chroot (locale files are cleaned later)
 export LC_ALL=C
 
+# Install ramsys boot script and modules for initramfs
+mkdir -p "${ROOT}/etc/initramfs-tools/scripts"
+cp "$DIR/../initramfs-tools/scripts/ramsys" "${ROOT}/etc/initramfs-tools/scripts/ramsys"
+cp "$DIR/../initramfs-tools/modules" "${ROOT}/etc/initramfs-tools/modules"
+
 KERNEL_RELEASE=$(ls "${ROOT}/lib/modules" | sort -n -r | head -1)
 chroot "${ROOT}" /sbin/mkinitramfs -o "/tmp/initrd.img-${KERNEL_RELEASE}" "${KERNEL_RELEASE}"
 

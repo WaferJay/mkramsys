@@ -1,6 +1,24 @@
 # Local filesystem mounting			-*- shell-script -*-
 # shellcheck shell=sh
 
+# Parse ramsys boot parameters from kernel command line
+_ramsys_parse_cmdline()
+{
+	RAMSYSSRC=
+	RAMSYSDIR=
+	RAMSYSSRCFSTYPE=
+	RAMSYSSRCFLAGS=
+	# shellcheck disable=SC2013
+	for x in $(cat /proc/cmdline); do
+		case $x in
+		ramsys.src=*)        RAMSYSSRC="${x#ramsys.src=}" ;;
+		ramsys.dir=*)        RAMSYSDIR="${x#ramsys.dir=}" ;;
+		ramsys.src.fstype=*) RAMSYSSRCFSTYPE="${x#ramsys.src.fstype=}" ;;
+		ramsys.src.flags=*)  RAMSYSSRCFLAGS="${x#ramsys.src.flags=}" ;;
+		esac
+	done
+}
+
 ramsys_top()
 {
 	if [ "${ramsys_top_used}" != "yes" ]; then
@@ -142,12 +160,10 @@ ramsys_device_setup()
 	DEV="${real_dev}"
 }
 
-# RAMSYSSRC=ramsys.src
-# RAMSYSDIR=ramsys.dir
-# RAMSYSSRCFSTYPE=ramsys.src.fstype
-# RAMSYSSRCFLAGS=ramsys.src.flags
 ramsys_mount_root()
 {
+	_ramsys_parse_cmdline
+
 	local mnt=/mnt
 	local ramsys_mnt="$mnt/lower"
 	local upperdir="$mnt/upper"
