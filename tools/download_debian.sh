@@ -51,10 +51,17 @@ debootstrap --arch="${ARCH}" --include="linux-image-${ARCH},initramfs-tools" "${
 cp "$DIR/cleansys.sh" "${ROOT}/sbin/cleansys"
 chmod 755 "${ROOT}/sbin/cleansys"
 
+# Set system locale to C.UTF-8 (built into glibc, no /usr/share/locale/ files needed)
+# LC_ALL overrides any locale variables forwarded by SSH clients via AcceptEnv
+printf 'LANG=C.UTF-8\nLC_ALL=C.UTF-8\n' > "${ROOT}/etc/default/locale"
+
 mount -o bind /dev "$ROOT/dev"
 mount -o bind /dev/pts "$ROOT/dev/pts"
 mount -o bind /proc "$ROOT/proc"
 mount -o bind /sys "$ROOT/sys"
+
+# Prevent host locale from leaking into chroot (locale files are cleaned later)
+export LC_ALL=C
 
 KERNEL_RELEASE=$(ls "${ROOT}/lib/modules" | sort -n -r | head -1)
 chroot "${ROOT}" /sbin/mkinitramfs -o "/tmp/initrd.img-${KERNEL_RELEASE}" "${KERNEL_RELEASE}"
@@ -65,9 +72,9 @@ chroot "${ROOT}" /sbin/mkinitramfs -o "/tmp/initrd.img-${KERNEL_RELEASE}" "${KER
 cp -r "${ROOT}/boot" .
 
 chroot "${ROOT}" /bin/apt purge --auto-remove -y "linux-image-${ARCH}" "linux-image-${KERNEL_RELEASE}"
-chroot "${ROOT}" /sbin/cleansys /
+chroot "${ROOT}" /sbin/cleansys --full /
 
-"$DIR/cleansys.sh" "${ROOT}"
+"$DIR/cleansys.sh" --full "${ROOT}"
 
 umount "$ROOT/dev/pts"
 umount "$ROOT/dev"

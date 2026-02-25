@@ -244,10 +244,10 @@ chroot "$ROOTFS" apt-get remove --purge -y apt-file >/dev/null
 chroot "$ROOTFS" apt-get autoremove --purge -y >/dev/null
 
 if [ -x "$ROOTFS/sbin/cleansys" ]; then
-    chroot "$ROOTFS" /sbin/cleansys /
+    chroot "$ROOTFS" /sbin/cleansys --full /
 fi
 
-"$DIR/cleansys.sh" "$ROOTFS"
+"$DIR/cleansys.sh" --full "$ROOTFS"
 
 # ── Phase 7: Create output squashfs ────────────────────────────────────────
 
