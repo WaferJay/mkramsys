@@ -56,15 +56,15 @@ mount -o bind /dev/pts "$ROOT/dev/pts"
 mount -o bind /proc "$ROOT/proc"
 mount -o bind /sys "$ROOT/sys"
 
-KERNEL_RELEASE=$(ls /lib/modules | sort -n -r | head -1)
-chroot "${ROOT}" /sbin/mkinitramfs -o "/tmp/initrd.img-${KERNEL_RELEASE}"
+KERNEL_RELEASE=$(ls "${ROOT}/lib/modules" | sort -n -r | head -1)
+chroot "${ROOT}" /sbin/mkinitramfs -o "/tmp/initrd.img-${KERNEL_RELEASE}" "${KERNEL_RELEASE}"
 
 #cp "${ROOT}/tmp/initrd.img-${KERNEL_RELEASE}" .
 #cp "${ROOT}/boot/vmlinuz-${KERNEL_RELEASE}" .
 
 cp -r "${ROOT}/boot" .
 
-chroot "${ROOT}" /bin/apt purge --auto-remove -y "linux-image-${ARCH}" "linux-image-${KERNEL_RELEASE}-${ARCH}"
+chroot "${ROOT}" /bin/apt purge --auto-remove -y "linux-image-${ARCH}" "linux-image-${KERNEL_RELEASE}"
 chroot "${ROOT}" /sbin/cleansys /
 
 "$DIR/cleansys.sh" "${ROOT}"
