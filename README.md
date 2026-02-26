@@ -55,14 +55,18 @@ Global option `-w DIR` sets the workspace directory (default: `./build`).
 ### init
 
 ```bash
-sudo ./mkramsys init [--force]
+sudo ./mkramsys init [--force] [--mirror URL] [--codename NAME]
 ```
 
 Creates a base Debian image via debootstrap. Installs a kernel, generates an
 initramfs with the ramsys boot script, extracts boot files, then purges the
 kernel and cleans the rootfs to minimize image size.
 
-`--force` re-initializes an existing workspace, discarding all previous state.
+| Option       | Description                                            |
+|--------------|--------------------------------------------------------|
+| `--force`    | Re-initialize, discarding all previous state           |
+| `--mirror`   | Debian mirror (default: `https://deb.debian.org/debian/`) |
+| `--codename` | Debian release (default: `trixie`)                     |
 
 ### driver
 
@@ -163,8 +167,6 @@ mounts it with overlayfs as the root filesystem.
 
 | Variable                    | Default                          |
 |-----------------------------|----------------------------------|
-| `DEBIAN_MIRROR_URL`         | `https://deb.debian.org/debian/` |
-| `DEBIAN_CODENAME`           | `trixie`                         |
 | `SQUASHFS_COMPRESSION_LEVEL`| `15` (zstd)                      |
 | `EXTRA_PACKAGES`            | *(empty)*                        |
 

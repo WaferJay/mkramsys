@@ -54,13 +54,17 @@ mkramsys [-w WORKSPACE] <command> [options]
 ### init
 
 ```bash
-sudo ./mkramsys init [--force]
+sudo ./mkramsys init [--force] [--mirror URL] [--codename NAME]
 ```
 
 通过 debootstrap 创建基础 Debian 镜像。安装内核、生成包含 ramsys 引导脚本的
 initramfs、提取引导文件，然后清除内核并清理 rootfs 以缩减镜像体积。
 
-`--force` 重新初始化已有的工作区，丢弃所有先前状态。
+| 选项         | 说明                                                   |
+|--------------|--------------------------------------------------------|
+| `--force`    | 重新初始化，丢弃所有先前状态                           |
+| `--mirror`   | Debian 镜像源（默认：`https://deb.debian.org/debian/`）|
+| `--codename` | Debian 发行版代号（默认：`trixie`）                    |
 
 ### driver
 
@@ -156,8 +160,6 @@ overlayfs 挂载为根文件系统。
 
 | 变量                        | 默认值                           |
 |-----------------------------|----------------------------------|
-| `DEBIAN_MIRROR_URL`         | `https://deb.debian.org/debian/` |
-| `DEBIAN_CODENAME`           | `trixie`                         |
 | `SQUASHFS_COMPRESSION_LEVEL`| `15`（zstd）                     |
 | `EXTRA_PACKAGES`            | *（空）*                         |
 
