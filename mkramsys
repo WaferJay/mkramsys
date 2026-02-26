@@ -1,0 +1,73 @@
+#!/bin/bash
+# mkramsys — Unified CLI for building RAM-based Debian systems
+#
+# Usage: mkramsys [-w WORKSPACE] <command> [options]
+
+set -e
+
+PROG=${0##*/}
+LIBDIR="$(dirname "$(readlink -f "$0")")/lib"
+
+usage() {
+    cat <<EOF
+Usage: $PROG [-w WORKSPACE] <command> [options]
+
+Commands:
+  init      Create base Debian squashfs image (debootstrap)
+  driver    Detect host firmware and install matching packages
+  install   Install packages in the image
+  shell     Interactive chroot, run a command, or execute a script
+  build     Produce final squashfs image
+  reset     Discard overlay changes
+
+Options:
+  -w DIR    Workspace directory (default: ./build)
+  -h        Show this help
+
+Environment variables:
+  DEBIAN_MIRROR_URL            Debian mirror  (default: https://deb.debian.org/debian/)
+  DEBIAN_CODENAME              Debian release (default: trixie)
+  SQUASHFS_COMPRESSION_LEVEL   zstd level     (default: 15)
+  EXTRA_PACKAGES               Extra packages (space-separated)
+EOF
+    exit "${1:-0}"
+}
+
+# ── Global option parsing ─────────────────────────────────────────────────────
+
+while getopts ":w:h" opt; do
+    case $opt in
+        w) export WORKSPACE="$OPTARG" ;;
+        h) usage 0 ;;
+        :) echo "error: -$OPTARG requires an argument" >&2; usage 1 ;;
+        *) echo "error: unknown option -$OPTARG" >&2; usage 1 ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+COMMAND="${1:-}"
+[ -z "$COMMAND" ] && usage 1
+shift
+
+# ── Source shared library ─────────────────────────────────────────────────────
+
+# shellcheck source=lib/common.sh
+. "$LIBDIR/common.sh"
+
+# Resolve WORKSPACE to absolute path after common.sh sets the default
+WORKSPACE="$(readlink -f "$WORKSPACE")"
+export WORKSPACE
+
+# ── Dispatch to subcommand ────────────────────────────────────────────────────
+
+CMD_SCRIPT="$LIBDIR/cmd_${COMMAND}.sh"
+
+if [ ! -f "$CMD_SCRIPT" ]; then
+    echo "error: unknown command '$COMMAND'" >&2
+    usage 1
+fi
+
+# shellcheck source=/dev/null
+. "$CMD_SCRIPT"
+
+cmd_run "$@"
