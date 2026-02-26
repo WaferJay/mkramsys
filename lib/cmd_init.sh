@@ -4,12 +4,18 @@
 
 cmd_run() {
     local force=0
+    local mirror="https://deb.debian.org/debian/"
+    local codename="trixie"
     while [ $# -gt 0 ]; do
         case "$1" in
             --force) force=1 ;;
+            --mirror)  [ -n "${2:-}" ] || die "init: --mirror requires an argument"; mirror="$2"; shift ;;
+            --codename) [ -n "${2:-}" ] || die "init: --codename requires an argument"; codename="$2"; shift ;;
             -h|--help)
-                echo "Usage: mkramsys init [--force]"
-                echo "  --force  Re-initialize, deleting existing overlay changes"
+                echo "Usage: mkramsys init [--force] [--mirror URL] [--codename NAME]"
+                echo "  --force     Re-initialize, deleting existing overlay changes"
+                echo "  --mirror    Debian mirror (default: https://deb.debian.org/debian/)"
+                echo "  --codename  Debian release (default: trixie)"
                 exit 0
                 ;;
             *) die "init: unknown option '$1'" ;;
@@ -41,10 +47,10 @@ cmd_run() {
 
     # ── Debootstrap ───────────────────────────────────────────────────────────
 
-    info "Running debootstrap (arch=$ARCH, release=$DEBIAN_CODENAME)..."
+    info "Running debootstrap (arch=$ARCH, release=$codename)..."
     debootstrap --arch="$ARCH" \
         --include="linux-image-${ARCH},initramfs-tools" \
-        "$DEBIAN_CODENAME" "$root" "$DEBIAN_MIRROR_URL"
+        "$codename" "$root" "$mirror"
 
     # ── Configure image ───────────────────────────────────────────────────────
 

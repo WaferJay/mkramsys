@@ -25,8 +25,6 @@ Options:
   -h        Show this help
 
 Environment variables:
-  DEBIAN_MIRROR_URL            Debian mirror  (default: https://deb.debian.org/debian/)
-  DEBIAN_CODENAME              Debian release (default: trixie)
   SQUASHFS_COMPRESSION_LEVEL   zstd level     (default: 15)
   EXTRA_PACKAGES               Extra packages (space-separated)
 EOF

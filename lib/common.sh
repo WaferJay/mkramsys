@@ -32,8 +32,6 @@ detect_arch() {
 
 # ── Environment defaults ─────────────────────────────────────────────────────
 
-: "${DEBIAN_MIRROR_URL:=https://deb.debian.org/debian/}"
-: "${DEBIAN_CODENAME:=trixie}"
 : "${SQUASHFS_COMPRESSION_LEVEL:=15}"
 
 # ── Workspace management ─────────────────────────────────────────────────────
