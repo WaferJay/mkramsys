@@ -168,7 +168,6 @@ mounts it with overlayfs as the root filesystem.
 | Variable                    | Default                          |
 |-----------------------------|----------------------------------|
 | `SQUASHFS_COMPRESSION_LEVEL`| `15` (zstd)                      |
-| `EXTRA_PACKAGES`            | *(empty)*                        |
 
 ## Distribution
 
