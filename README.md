@@ -55,18 +55,19 @@ Global option `-w DIR` sets the workspace directory (default: `./build`).
 ### init
 
 ```bash
-sudo ./mkramsys init [--force] [--mirror URL] [--codename NAME]
+sudo ./mkramsys init [--force] [--mirror URL] [--codename NAME] [--comp-level N]
 ```
 
 Creates a base Debian image via debootstrap. Installs a kernel, generates an
 initramfs with the ramsys boot script, extracts boot files, then purges the
 kernel and cleans the rootfs to minimize image size.
 
-| Option       | Description                                            |
-|--------------|--------------------------------------------------------|
-| `--force`    | Re-initialize, discarding all previous state           |
-| `--mirror`   | Debian mirror (default: `https://deb.debian.org/debian/`) |
-| `--codename` | Debian release (default: `trixie`)                     |
+| Option         | Description                                            |
+|----------------|--------------------------------------------------------|
+| `--force`      | Re-initialize, discarding all previous state           |
+| `--mirror`     | Debian mirror (default: `https://deb.debian.org/debian/`) |
+| `--codename`   | Debian release (default: `trixie`)                     |
+| `--comp-level` | zstd compression level (default: `15`)                 |
 
 ### driver
 
@@ -113,11 +114,16 @@ sudo ./mkramsys shell [-c CMD] [-l] [SCRIPT [ARGS...]]
 ### build
 
 ```bash
-sudo ./mkramsys build [-o output.sqfs]
+sudo ./mkramsys build [-o output.sqfs] [--comp-level N]
 ```
 
 Runs `cleansys --full` inside the chroot and from the host, then creates a
 squashfs image. Default output: `$WORKSPACE/output.sqfs`.
+
+| Option         | Description                            |
+|----------------|----------------------------------------|
+| `-o FILE`      | Output squashfs path                   |
+| `--comp-level` | zstd compression level (default: `15`) |
 
 This is a terminal operation — cleansys deletions are written into the overlay
 upper. Run `reset` before further modifications if needed.
@@ -162,12 +168,6 @@ mounts it with overlayfs as the root filesystem.
 | `ramsys.dir=`        | Path to squashfs file on the source      |
 | `ramsys.src.fstype=` | Filesystem type (auto-detected if omitted) |
 | `ramsys.src.flags=`  | Additional mount flags for source device |
-
-## Environment Variables
-
-| Variable                    | Default                          |
-|-----------------------------|----------------------------------|
-| `SQUASHFS_COMPRESSION_LEVEL`| `15` (zstd)                      |
 
 ## Distribution
 

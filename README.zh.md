@@ -54,17 +54,18 @@ mkramsys [-w WORKSPACE] <command> [options]
 ### init
 
 ```bash
-sudo ./mkramsys init [--force] [--mirror URL] [--codename NAME]
+sudo ./mkramsys init [--force] [--mirror URL] [--codename NAME] [--comp-level N]
 ```
 
 通过 debootstrap 创建基础 Debian 镜像。安装内核、生成包含 ramsys 引导脚本的
 initramfs、提取引导文件，然后清除内核并清理 rootfs 以缩减镜像体积。
 
-| 选项         | 说明                                                   |
-|--------------|--------------------------------------------------------|
-| `--force`    | 重新初始化，丢弃所有先前状态                           |
-| `--mirror`   | Debian 镜像源（默认：`https://deb.debian.org/debian/`）|
-| `--codename` | Debian 发行版代号（默认：`trixie`）                    |
+| 选项           | 说明                                                   |
+|----------------|--------------------------------------------------------|
+| `--force`      | 重新初始化，丢弃所有先前状态                           |
+| `--mirror`     | Debian 镜像源（默认：`https://deb.debian.org/debian/`）|
+| `--codename`   | Debian 发行版代号（默认：`trixie`）                    |
+| `--comp-level` | zstd 压缩级别（默认：`15`）                            |
 
 ### driver
 
@@ -108,11 +109,16 @@ sudo ./mkramsys shell [-c CMD] [-l] [SCRIPT [ARGS...]]
 ### build
 
 ```bash
-sudo ./mkramsys build [-o output.sqfs]
+sudo ./mkramsys build [-o output.sqfs] [--comp-level N]
 ```
 
 在 chroot 内和宿主机侧执行 `cleansys --full`，然后生成 squashfs 镜像。
 默认输出：`$WORKSPACE/output.sqfs`。
+
+| 选项           | 说明                           |
+|----------------|--------------------------------|
+| `-o FILE`      | 输出 squashfs 路径             |
+| `--comp-level` | zstd 压缩级别（默认：`15`）    |
 
 这是一个终结性操作——cleansys 的删除会写入 overlay upper。如需继续修改，
 先执行 `reset`。
@@ -155,12 +161,6 @@ overlayfs 挂载为根文件系统。
 | `ramsys.dir=`        | squashfs 文件在源设备上的路径            |
 | `ramsys.src.fstype=` | 文件系统类型（省略则自动检测）           |
 | `ramsys.src.flags=`  | 源设备的额外挂载选项                     |
-
-## 环境变量
-
-| 变量                        | 默认值                           |
-|-----------------------------|----------------------------------|
-| `SQUASHFS_COMPRESSION_LEVEL`| `15`（zstd）                     |
 
 ## 分发
 
