@@ -1,5 +1,7 @@
 # mkramsys
 
+English | [中文](README.zh.md)
+
 Build RAM-based Debian systems. Debootstrap a minimal rootfs, package it as
 squashfs, and boot it entirely from RAM using overlayfs.
 
@@ -178,4 +180,4 @@ embedded resource files. No external files needed at runtime.
 
 ## License
 
-GPLv3
+[GPLv3](LICENSE)
