@@ -26,7 +26,6 @@ Options:
 
 Environment variables:
   SQUASHFS_COMPRESSION_LEVEL   zstd level     (default: 15)
-  EXTRA_PACKAGES               Extra packages (space-separated)
 EOF
     exit "${1:-0}"
 }

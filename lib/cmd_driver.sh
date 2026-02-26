@@ -59,8 +59,8 @@ cmd_run() {
     fw_count=$(wc -l < "$fw_list")
     info "Found $fw_count unique firmware file(s) required by host hardware."
 
-    if [ "$fw_count" -eq 0 ] && [ -z "${EXTRA_PACKAGES:-}" ] && [ -z "$microcode_pkg" ]; then
-        info "No firmware needed and no extra packages requested. Nothing to do."
+    if [ "$fw_count" -eq 0 ] && [ -z "$microcode_pkg" ]; then
+        info "No firmware needed. Nothing to do."
         rm -f "$fw_list"
         return 0
     fi
@@ -142,7 +142,7 @@ cmd_run() {
     # ── Phase 5: Install firmware packages ────────────────────────────────────
 
     local all_packages
-    all_packages=$(echo "$packages $microcode_pkg ${EXTRA_PACKAGES:-}" | xargs)
+    all_packages=$(echo "$packages $microcode_pkg" | xargs)
 
     if [ -n "$all_packages" ]; then
         info "Installing: $all_packages"
