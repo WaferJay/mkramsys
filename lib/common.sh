@@ -32,8 +32,6 @@ detect_arch() {
 
 # ── Environment defaults ─────────────────────────────────────────────────────
 
-: "${SQUASHFS_COMPRESSION_LEVEL:=15}"
-
 # ── Workspace management ─────────────────────────────────────────────────────
 
 WORKSPACE="${WORKSPACE:-./build}"
@@ -122,10 +120,10 @@ overlay_unmount() {
 # ── Squashfs creation ─────────────────────────────────────────────────────────
 
 make_squashfs() {
-    local src="$1" dst="$2"
+    local src="$1" dst="$2" comp_level="${3:-15}"
     info "Creating squashfs image: $dst"
     mksquashfs "$src" "$dst" \
-        -comp zstd -Xcompression-level "$SQUASHFS_COMPRESSION_LEVEL" \
+        -comp zstd -Xcompression-level "$comp_level" \
         -b 1M -noappend \
         -always-use-fragments \
         -root-uid 0 -root-gid 0 \

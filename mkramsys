@@ -23,9 +23,6 @@ Commands:
 Options:
   -w DIR    Workspace directory (default: ./build)
   -h        Show this help
-
-Environment variables:
-  SQUASHFS_COMPRESSION_LEVEL   zstd level     (default: 15)
 EOF
     exit "${1:-0}"
 }

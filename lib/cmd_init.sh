@@ -6,16 +6,19 @@ cmd_run() {
     local force=0
     local mirror="https://deb.debian.org/debian/"
     local codename="trixie"
+    local comp_level=15
     while [ $# -gt 0 ]; do
         case "$1" in
             --force) force=1 ;;
             --mirror)  [ -n "${2:-}" ] || die "init: --mirror requires an argument"; mirror="$2"; shift ;;
             --codename) [ -n "${2:-}" ] || die "init: --codename requires an argument"; codename="$2"; shift ;;
+            --comp-level) [ -n "${2:-}" ] || die "init: --comp-level requires a value"; comp_level="$2"; shift ;;
             -h|--help)
-                echo "Usage: mkramsys init [--force] [--mirror URL] [--codename NAME]"
-                echo "  --force     Re-initialize, deleting existing overlay changes"
-                echo "  --mirror    Debian mirror (default: https://deb.debian.org/debian/)"
-                echo "  --codename  Debian release (default: trixie)"
+                echo "Usage: mkramsys init [--force] [--mirror URL] [--codename NAME] [--comp-level N]"
+                echo "  --force      Re-initialize, deleting existing overlay changes"
+                echo "  --mirror     Debian mirror (default: https://deb.debian.org/debian/)"
+                echo "  --codename   Debian release (default: trixie)"
+                echo "  --comp-level zstd compression level (default: 15)"
                 exit 0
                 ;;
             *) die "init: unknown option '$1'" ;;
@@ -106,7 +109,7 @@ cmd_run() {
     umount "$root/proc"
     umount "$root/sys"
 
-    make_squashfs "$root" "$WORKSPACE/base.sqfs"
+    make_squashfs "$root" "$WORKSPACE/base.sqfs" "$comp_level"
 
     # Write marker after successful squashfs creation
     workspace_init
