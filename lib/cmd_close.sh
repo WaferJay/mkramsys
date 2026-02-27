@@ -1,5 +1,5 @@
 #!/bin/bash
-# cmd_reset.sh — Discard overlay changes (keep session)
+# cmd_close.sh — Delete session entirely
 # Sourced by mkramsys dispatcher. Entry point: cmd_run [--force]
 
 cmd_run() {
@@ -9,11 +9,11 @@ cmd_run() {
         case "$1" in
             --force) force=1 ;;
             -h|--help)
-                echo "Usage: mkramsys reset [--force]"
+                echo "Usage: mkramsys close [--force]"
                 echo "  --force  Skip confirmation prompt"
                 exit 0
                 ;;
-            *) die "reset: unknown option '$1'" ;;
+            *) die "close: unknown option '$1'" ;;
         esac
         shift
     done
@@ -23,7 +23,7 @@ cmd_run() {
     workspace_require
 
     if [ "$force" -eq 0 ]; then
-        echo "This will discard ALL overlay changes in: $WORKSPACE/upper"
+        echo "This will delete the session and ALL overlay changes in: $WORKSPACE"
         printf "Continue? [y/N] "
         read -r answer
         case "$answer" in
@@ -32,9 +32,8 @@ cmd_run() {
         esac
     fi
 
-    info "Resetting overlay..."
-    rm -rf "$WORKSPACE/upper" "$WORKSPACE/.work"
-    mkdir -p "$WORKSPACE/upper"
+    info "Closing session: $WORKSPACE"
+    session_close
 
-    info "Overlay reset. Source image is unchanged."
+    info "Session closed."
 }

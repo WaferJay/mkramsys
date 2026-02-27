@@ -1,6 +1,6 @@
 #!/bin/bash
-# cmd_build.sh — Produce final squashfs image from overlay
-# Sourced by mkramsys dispatcher. Entry point: cmd_run [-o output.sqfs]
+# cmd_build.sh — Snapshot current overlay state as squashfs (non-destructive)
+# Sourced by mkramsys dispatcher. Entry point: cmd_run -o <output.sqfs>
 
 cmd_run() {
     local output=""
@@ -12,13 +12,12 @@ cmd_run() {
             --comp-level) shift; comp_level="${1:?'--comp-level' requires a value}" ;;
             -h|--help)
                 cat <<EOF
-Usage: mkramsys build [-o output.sqfs] [--comp-level N]
-  -o FILE        Output squashfs path (default: WORKSPACE/output.sqfs)
+Usage: mkramsys build -o <output.sqfs> [--comp-level N]
+  -o FILE        Output squashfs path (required)
   --comp-level N zstd compression level (default: 15)
 
-Note: build runs cleansys --full, writing deletions into the overlay upper
-directory. This is a terminal operation — run 'mkramsys reset' before further
-modifications if needed.
+Snapshots the current overlay state without running cleansys.
+The session remains active for further modifications.
 EOF
                 exit 0
                 ;;
@@ -27,7 +26,7 @@ EOF
         shift
     done
 
-    : "${output:=$WORKSPACE/output.sqfs}"
+    [ -z "$output" ] && die "build: -o <output.sqfs> is required"
 
     require_root
     require_cmd mksquashfs
@@ -35,21 +34,6 @@ EOF
 
     overlay_mount
     trap overlay_unmount EXIT
-
-    local scriptdir
-    scriptdir="$(dirname "$(readlink -f "$LIBDIR")")"
-
-    # ── Clean inside chroot ───────────────────────────────────────────────────
-
-    info "Running cleansys --full inside chroot..."
-    if [ -x "$ROOTFS/sbin/cleansys" ]; then
-        chroot "$ROOTFS" /sbin/cleansys --full /
-    fi
-
-    # ── Clean from host side ──────────────────────────────────────────────────
-
-    info "Running cleansys --full from host..."
-    "$scriptdir/tools/cleansys.sh" --full "$ROOTFS"
 
     # ── Unmount bind mounts (keep overlay for mksquashfs) ─────────────────────
 

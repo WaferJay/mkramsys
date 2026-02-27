@@ -1,24 +1,30 @@
 #!/bin/bash
-# cmd_init.sh — Create base Debian squashfs image via debootstrap
-# Sourced by mkramsys dispatcher. Entry point: cmd_run [--force]
+# cmd_init.sh — Create a standalone Debian squashfs image via debootstrap
+# Sourced by mkramsys dispatcher. Entry point: cmd_run -o <output.sqfs> [options]
+# No session is created — this is a pure image builder.
 
 cmd_run() {
-    local force=0
+    local output=""
+    local boot_dir=""
     local mirror="https://deb.debian.org/debian/"
     local codename="trixie"
     local comp_level=15
     while [ $# -gt 0 ]; do
         case "$1" in
-            --force) force=1 ;;
+            -o) shift; output="${1:?'-o' requires a filename}" ;;
+            --boot-dir) shift; boot_dir="${1:?'--boot-dir' requires a directory}" ;;
             --mirror)  [ -n "${2:-}" ] || die "init: --mirror requires an argument"; mirror="$2"; shift ;;
             --codename) [ -n "${2:-}" ] || die "init: --codename requires an argument"; codename="$2"; shift ;;
             --comp-level) [ -n "${2:-}" ] || die "init: --comp-level requires a value"; comp_level="$2"; shift ;;
             -h|--help)
-                echo "Usage: mkramsys init [--force] [--mirror URL] [--codename NAME] [--comp-level N]"
-                echo "  --force      Re-initialize, deleting existing overlay changes"
-                echo "  --mirror     Debian mirror (default: https://deb.debian.org/debian/)"
-                echo "  --codename   Debian release (default: trixie)"
-                echo "  --comp-level zstd compression level (default: 15)"
+                cat <<EOF
+Usage: mkramsys init -o <output.sqfs> [options]
+  -o FILE        Output squashfs path (required)
+  --boot-dir DIR Directory for kernel + initramfs (default: boot/ alongside -o)
+  --mirror URL   Debian mirror (default: https://deb.debian.org/debian/)
+  --codename     Debian release (default: trixie)
+  --comp-level N zstd compression level (default: 15)
+EOF
                 exit 0
                 ;;
             *) die "init: unknown option '$1'" ;;
@@ -26,20 +32,21 @@ cmd_run() {
         shift
     done
 
+    [ -z "$output" ] && die "init: -o <output.sqfs> is required"
+
+    # Resolve output to absolute path
+    output="$(readlink -f "$output")"
+
+    # Default boot dir: boot/ alongside the output file
+    if [ -z "$boot_dir" ]; then
+        boot_dir="$(dirname "$output")/boot"
+    fi
+    boot_dir="$(mkdir -p "$boot_dir" && readlink -f "$boot_dir")"
+
     require_root
     require_cmd debootstrap mksquashfs mkinitramfs
 
     detect_arch
-
-    if [ -f "$WORKSPACE/.mkramsys" ]; then
-        if [ "$force" -eq 0 ]; then
-            die "Workspace already initialized. Use --force to re-initialize."
-        fi
-        info "Re-initializing workspace (--force)..."
-        rm -rf "${WORKSPACE:?}/upper" "${WORKSPACE:?}/.work" "${WORKSPACE:?}/base.sqfs" "${WORKSPACE:?}/boot"
-    fi
-
-    mkdir -p "$WORKSPACE"
 
     local tmproot
     tmproot=$(mktemp -d)
@@ -89,9 +96,8 @@ cmd_run() {
     info "Generating initramfs for kernel $kernel_release..."
     chroot "$root" /sbin/mkinitramfs -o "/tmp/initrd.img-${kernel_release}" "$kernel_release"
 
-    mkdir -p "$WORKSPACE/boot"
-    cp -r "$root/boot/"* "$WORKSPACE/boot/"
-    cp "$root/tmp/initrd.img-${kernel_release}" "$WORKSPACE/boot/"
+    cp -r "$root/boot/"* "$boot_dir/"
+    cp "$root/tmp/initrd.img-${kernel_release}" "$boot_dir/"
 
     # ── Purge kernel and clean ────────────────────────────────────────────────
 
@@ -109,11 +115,8 @@ cmd_run() {
     umount "$root/proc"
     umount "$root/sys"
 
-    make_squashfs "$root" "$WORKSPACE/base.sqfs" "$comp_level"
+    make_squashfs "$root" "$output" "$comp_level"
 
-    # Write marker after successful squashfs creation
-    workspace_init
-
-    info "Base image created: $WORKSPACE/base.sqfs"
-    info "Boot files: $WORKSPACE/boot/"
+    info "Base image created: $output"
+    info "Boot files: $boot_dir/"
 }

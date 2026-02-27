@@ -10,18 +10,21 @@ LIBDIR="$(dirname "$(readlink -f "$0")")/lib"
 
 usage() {
     cat <<EOF
-Usage: $PROG [-w WORKSPACE] <command> [options]
+Usage: $PROG [-w DIR] <command> [options]
 
 Commands:
-  init      Create base Debian squashfs image (debootstrap)
+  init      Create a standalone Debian squashfs image (debootstrap)
+  open      Start a session on an existing squashfs
   driver    Detect host firmware and install matching packages
   install   Install packages in the image
   shell     Interactive chroot, run a command, or execute a script
-  build     Produce final squashfs image
-  reset     Discard overlay changes
+  build     Snapshot current state as squashfs (non-destructive)
+  commit    Finalize: cleansys + squashfs + close session
+  reset     Discard overlay changes (keep session)
+  close     Delete session entirely
 
 Options:
-  -w DIR    Workspace directory (default: ./build)
+  -w DIR    Session directory (override automatic session discovery)
   -h        Show this help
 EOF
     exit "${1:-0}"
@@ -43,14 +46,16 @@ COMMAND="${1:-}"
 [ -z "$COMMAND" ] && usage 1
 shift
 
+# Resolve WORKSPACE to absolute path only if explicitly set via -w
+if [ -n "${WORKSPACE:-}" ]; then
+    WORKSPACE="$(readlink -f "$WORKSPACE")"
+    export WORKSPACE
+fi
+
 # ── Source shared library ─────────────────────────────────────────────────────
 
 # shellcheck source=lib/common.sh
 . "$LIBDIR/common.sh"
-
-# Resolve WORKSPACE to absolute path after common.sh sets the default
-WORKSPACE="$(readlink -f "$WORKSPACE")"
-export WORKSPACE
 
 # ── Dispatch to subcommand ────────────────────────────────────────────────────
 

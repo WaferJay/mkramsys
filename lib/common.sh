@@ -30,38 +30,56 @@ detect_arch() {
     export ARCH
 }
 
-# ── Environment defaults ─────────────────────────────────────────────────────
+# ── Session discovery ────────────────────────────────────────────────────────
+# Finds the active session directory. If WORKSPACE was set via -w, use that.
+# Otherwise, read .mkramsys-session from cwd.
+
+session_find() {
+    # If -w was used, WORKSPACE is already set by the dispatcher
+    [ -n "${WORKSPACE:-}" ] && return 0
+
+    local session_file=".mkramsys-session"
+    [ -f "$session_file" ] || die "No active session (run 'mkramsys open <sqfs>' first)"
+
+    WORKSPACE=$(cat "$session_file")
+    [ -d "$WORKSPACE" ] || die "Session directory missing: $WORKSPACE"
+    export WORKSPACE
+}
 
 # ── Workspace management ─────────────────────────────────────────────────────
 
-WORKSPACE="${WORKSPACE:-./build}"
-
 workspace_init() {
-    mkdir -p "$WORKSPACE/upper" "$WORKSPACE/.work" "$WORKSPACE/boot"
+    local source_sqfs="$1"
+    mkdir -p "$WORKSPACE/upper" "$WORKSPACE/.work"
     echo "mkramsys" > "$WORKSPACE/.mkramsys"
+    echo "$source_sqfs" > "$WORKSPACE/.source"
 }
 
 workspace_require() {
-    [ -f "$WORKSPACE/.mkramsys" ] || die "Not a mkramsys workspace: $WORKSPACE (run 'mkramsys init' first)"
+    [ -f "$WORKSPACE/.mkramsys" ] || die "Not a mkramsys session: $WORKSPACE (run 'mkramsys open' first)"
 }
 
 workspace_require_sqfs() {
     workspace_require
-    [ -f "$WORKSPACE/base.sqfs" ] || die "No base.sqfs in workspace (run 'mkramsys init' first)"
+    [ -f "$WORKSPACE/.source" ] || die "No source sqfs recorded (run 'mkramsys open' first)"
+    local sqfs
+    sqfs=$(cat "$WORKSPACE/.source")
+    [ -f "$sqfs" ] || die "Source sqfs missing: $sqfs"
 }
 
 # ── Workspace locking ────────────────────────────────────────────────────────
 
 workspace_lock() {
+    session_find
     workspace_require
     # FD 9 is used as the lock file descriptor
     exec 9>"$WORKSPACE/.lock"
-    flock -n 9 || die "Another mkramsys process is using this workspace."
+    flock -n 9 || die "Another mkramsys process is using this session."
 }
 
 # ── Overlay mount/unmount ─────────────────────────────────────────────────────
 # overlay_mount creates temporary lower/ and rootfs/ directories, mounts
-# base.sqfs as lower and the persistent upper/ as the overlay upper.
+# the source sqfs as lower and the persistent upper/ as the overlay upper.
 # Sets OVERLAY_TMPDIR, LOWER, and ROOTFS for the caller.
 #
 # overlay_unmount reverses the mounts and removes the temp dir.
@@ -74,6 +92,9 @@ ROOTFS=""
 overlay_mount() {
     workspace_require_sqfs
 
+    local sqfs
+    sqfs=$(cat "$WORKSPACE/.source")
+
     OVERLAY_TMPDIR=$(mktemp -d)
     LOWER="$OVERLAY_TMPDIR/lower"
     ROOTFS="$OVERLAY_TMPDIR/rootfs"
@@ -83,7 +104,7 @@ overlay_mount() {
     rm -rf "$WORKSPACE/.work"
     mkdir -p "$WORKSPACE/.work"
 
-    mount -t squashfs -o ro "$WORKSPACE/base.sqfs" "$LOWER"
+    mount -t squashfs -o ro "$sqfs" "$LOWER"
     mount -t overlay -o "lowerdir=$LOWER,upperdir=$WORKSPACE/upper,workdir=$WORKSPACE/.work" none "$ROOTFS"
 
     mount -o bind /dev     "$ROOTFS/dev"
@@ -115,6 +136,25 @@ overlay_unmount() {
     OVERLAY_TMPDIR=""
     LOWER=""
     ROOTFS=""
+}
+
+# ── Session cleanup ──────────────────────────────────────────────────────────
+
+session_close() {
+    local session_dir="$WORKSPACE"
+
+    # Remove session marker from cwd
+    local session_file=".mkramsys-session"
+    if [ -f "$session_file" ]; then
+        local recorded
+        recorded=$(cat "$session_file")
+        if [ "$recorded" = "$session_dir" ]; then
+            rm -f "$session_file"
+        fi
+    fi
+
+    # Remove session directory
+    rm -rf "$session_dir"
 }
 
 # ── Squashfs creation ─────────────────────────────────────────────────────────
