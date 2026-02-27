@@ -52,7 +52,7 @@ cmd_run() {
 
     info "Running debootstrap (arch=$ARCH, release=$codename)..."
     debootstrap --arch="$ARCH" \
-        --include="linux-image-${ARCH},initramfs-tools" \
+        --include="linux-image-${ARCH},initramfs-tools,zstd,busybox" \
         "$codename" "$root" "$mirror"
 
     # ── Configure image ───────────────────────────────────────────────────────
