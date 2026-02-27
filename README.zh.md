@@ -11,17 +11,18 @@ squashfs 镜像，启动后整个系统运行在内存中，使用 overlayfs 提
 
 ```bash
 # 构建基础镜像
-sudo ./mkramsys init
+sudo ./mkramsys init -o base.sqfs
 
-# 定制
+# 打开会话进行定制
+sudo ./mkramsys open base.sqfs
 sudo ./mkramsys install vim curl openssh-server
 sudo ./mkramsys driver          # 自动检测并安装固件
 
-# 生成最终 squashfs
-sudo ./mkramsys build -o system.sqfs
+# 生成最终 squashfs 并关闭会话
+sudo ./mkramsys commit -o system.sqfs
 ```
 
-使用 `build/boot/` 中的内核和 initramfs 启动：
+使用 `boot/` 中的内核和 initramfs 启动：
 
 ```
 linux /vmlinuz boot=ramsys ramsys.src=/dev/sda1 ramsys.dir=system.sqfs
@@ -32,40 +33,60 @@ initrd /initrd.img
 
 - Root 权限
 - `debootstrap`、`mksquashfs` (squashfs-tools)、`bash`
+- `open` 命令需要：`unsquashfs` (squashfs-tools)
 - `driver` 命令需要：`modinfo`、`modprobe`
 
 ## 命令
 
 ```
-mkramsys [-w WORKSPACE] <command> [options]
+mkramsys [-w DIR] <command> [options]
 ```
 
 | 命令      | 说明                                     |
 |-----------|------------------------------------------|
-| `init`    | 通过 debootstrap 构建基础系统，生成 base.sqfs |
+| `init`    | 创建独立的 Debian squashfs 镜像          |
+| `open`    | 在已有 squashfs 上启动会话               |
 | `driver`  | 检测宿主机固件需求，安装对应的固件包     |
 | `install` | 向镜像中安装软件包                       |
 | `shell`   | chroot 进入镜像                          |
-| `build`   | 清理并生成最终 squashfs                  |
-| `reset`   | 丢弃所有 overlay 修改                    |
+| `build`   | 快照当前状态为 squashfs（非破坏性）      |
+| `commit`  | 终结：cleansys + squashfs + 关闭会话     |
+| `reset`   | 丢弃 overlay 修改（保留会话）            |
+| `close`   | 删除整个会话                             |
 
-全局选项 `-w DIR` 设置工作区目录（默认：`./build`）。
+全局选项 `-w DIR` 覆盖自动会话发现，指定明确的会话目录。
 
 ### init
 
 ```bash
-sudo ./mkramsys init [--force] [--mirror URL] [--codename NAME] [--comp-level N]
+sudo ./mkramsys init -o <output.sqfs> [--boot-dir DIR] [--mirror URL] [--codename NAME] [--comp-level N]
 ```
 
-通过 debootstrap 创建基础 Debian 镜像。安装内核、生成包含 ramsys 引导脚本的
-initramfs、提取引导文件，然后清除内核并清理 rootfs 以缩减镜像体积。
+通过 debootstrap 创建独立的 Debian squashfs 镜像。安装内核、生成包含 ramsys
+引导脚本的 initramfs、提取引导文件，然后清除内核并清理 rootfs 以缩减镜像体积。
+
+不会创建会话——这是一个纯粹的镜像构建器。
 
 | 选项           | 说明                                                   |
 |----------------|--------------------------------------------------------|
-| `--force`      | 重新初始化，丢弃所有先前状态                           |
+| `-o FILE`      | 输出 squashfs 路径（必填）                             |
+| `--boot-dir`   | 内核 + initramfs 目录（默认：输出文件旁的 `boot/`）    |
 | `--mirror`     | Debian 镜像源（默认：`https://deb.debian.org/debian/`）|
 | `--codename`   | Debian 发行版代号（默认：`trixie`）                    |
 | `--comp-level` | zstd 压缩级别（默认：`15`）                            |
+
+### open
+
+```bash
+sudo ./mkramsys open <sqfs-path> [--force]
+```
+
+在已有 squashfs 文件上启动会话。创建会话目录（默认在 `/tmp`，可用 `-w` 覆盖），
+并在当前目录写入 `.mkramsys-session`，后续命令自动找到该会话。
+
+| 选项      | 说明                   |
+|-----------|------------------------|
+| `--force` | 覆盖已存在的活跃会话   |
 
 ### driver
 
@@ -88,7 +109,7 @@ sudo ./mkramsys driver
 sudo ./mkramsys install [-f packages.txt] [PKG...]
 ```
 
-通过 overlay 安装软件包，修改累积在工作区的 upper 目录中。
+通过 overlay 安装软件包，修改累积在会话的 upper 目录中。
 
 `-f FILE` 从文件读取包名（每行一个，支持 `#` 注释）。
 
@@ -109,19 +130,30 @@ sudo ./mkramsys shell [-c CMD] [-l] [SCRIPT [ARGS...]]
 ### build
 
 ```bash
-sudo ./mkramsys build [-o output.sqfs] [--comp-level N]
+sudo ./mkramsys build -o <output.sqfs> [--comp-level N]
 ```
 
-在 chroot 内和宿主机侧执行 `cleansys --full`，然后生成 squashfs 镜像。
-默认输出：`$WORKSPACE/output.sqfs`。
+将当前 overlay 状态快照为 squashfs 镜像，不执行 cleansys。会话保持活跃，
+可继续修改。
 
 | 选项           | 说明                           |
 |----------------|--------------------------------|
-| `-o FILE`      | 输出 squashfs 路径             |
+| `-o FILE`      | 输出 squashfs 路径（必填）     |
 | `--comp-level` | zstd 压缩级别（默认：`15`）    |
 
-这是一个终结性操作——cleansys 的删除会写入 overlay upper。如需继续修改，
-先执行 `reset`。
+### commit
+
+```bash
+sudo ./mkramsys commit -o <output.sqfs> [--comp-level N]
+```
+
+在 chroot 内和宿主机侧执行 `cleansys --full`，生成最终 squashfs 镜像，
+然后关闭会话。这是一个终结性操作——会话目录和 `.mkramsys-session` 都会被删除。
+
+| 选项           | 说明                           |
+|----------------|--------------------------------|
+| `-o FILE`      | 输出 squashfs 路径（必填）     |
+| `--comp-level` | zstd 压缩级别（默认：`15`）    |
 
 ### reset
 
@@ -129,26 +161,52 @@ sudo ./mkramsys build [-o output.sqfs] [--comp-level N]
 sudo ./mkramsys reset [--force]
 ```
 
-删除 overlay upper 目录，丢弃 `init` 之后的所有修改。基础镜像不受影响。
+删除 overlay upper 目录，丢弃 `open` 之后的所有修改。源镜像和会话不受影响。
 `--force` 跳过确认提示。
 
-## 工作区
+### close
 
-所有状态保存在单一目录中（默认 `./build/`）：
+```bash
+sudo ./mkramsys close [--force]
+```
+
+删除会话目录和 `.mkramsys-session` 标记，丢弃所有 overlay 修改。
+`--force` 跳过确认提示。
+
+## 会话
+
+镜像创建（`init`）和镜像修改（`open`/`commit`/`close`）是分离的：
+
+```bash
+# 创建 → 打开 → 修改 → 终结
+sudo ./mkramsys init -o base.sqfs
+sudo ./mkramsys open base.sqfs
+sudo ./mkramsys install vim
+sudo ./mkramsys commit -o final.sqfs
+
+# 或者：快照但不关闭，继续工作
+sudo ./mkramsys open base.sqfs
+sudo ./mkramsys install vim
+sudo ./mkramsys build -o snapshot.sqfs    # 会话保持活跃
+sudo ./mkramsys install curl
+sudo ./mkramsys commit -o final.sqfs      # cleansys + 关闭
+```
+
+会话发现机制：`open` 在当前目录写入 `.mkramsys-session`，后续命令读取此文件
+找到会话。使用 `-w DIR` 可覆盖为指定路径。
+
+会话目录结构：
 
 ```
-build/
-├── base.sqfs        # init 生成的基础镜像
-├── boot/            # 内核 + initramfs
+/tmp/mkramsys-session.XXXXXX/
+├── .mkramsys        # 会话标记
+├── .source          # 源 squashfs 的绝对路径
+├── .lock            # flock 目标
 ├── upper/           # overlay 修改（跨命令持久保存）
-├── .work/           # overlay 工作目录
-└── .mkramsys        # 工作区标记文件
+└── .work/           # overlay 工作目录
 ```
 
-overlay 修改在 `driver`、`install`、`shell` 命令间累积。squashfs 仅创建两次：
-`init` 时（基础镜像）和 `build` 时（最终镜像），避免迭代定制过程中重复压缩。
-
-工作区通过文件锁防止并发访问。
+通过文件锁防止同一会话的并发访问。
 
 ## 引导参数
 
@@ -165,7 +223,7 @@ overlayfs 挂载为根文件系统。
 ## 分发
 
 ```bash
-./build.sh              # 生成 dist/mkramsys（单文件，约 34KB）
+./build.sh              # 生成 dist/mkramsys（单文件，约 42KB）
 ./build.sh output.sh    # 自定义输出路径
 ```
 
