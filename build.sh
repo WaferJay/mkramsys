@@ -81,7 +81,7 @@ BLOCK
         tail -n +2 "$f" \
             | sed "s/^cmd_run/cmd_${cmd}_run/" \
             | sed 's|scriptdir="$(dirname "$(readlink -f "$LIBDIR")")".*|scriptdir="$_RESOURCE_DIR"|'
-        dispatch_cases="${dispatch_cases}    ${cmd}) cmd_${cmd}_run \"\$@\" ;;\n"
+        dispatch_cases="${dispatch_cases}    ${cmd}) ( cmd_${cmd}_run \"\$@\" ) ;;\n"
     done
 
     # ── Dispatcher (from ./mkramsys) ──────────────────────────────────────────
