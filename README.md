@@ -12,7 +12,7 @@ changes live in RAM and disappear on reboot.
 
 ```bash
 # Build a base image
-sudo ./mkramsys init -o base.sqfs
+sudo ./mkramsys init base.sqfs
 
 # Open a session to customize
 sudo ./mkramsys open base.sqfs
@@ -20,7 +20,7 @@ sudo ./mkramsys install vim curl openssh-server
 sudo ./mkramsys driver          # auto-detect and install firmware
 
 # Produce final squashfs and close session
-sudo ./mkramsys commit -o system.sqfs
+sudo ./mkramsys commit system.sqfs
 ```
 
 Boot the result with a kernel and initramfs from `boot/`:
@@ -61,7 +61,7 @@ session directory.
 ### init
 
 ```bash
-sudo ./mkramsys init -o <output.sqfs> [--boot-dir DIR] [--mirror URL] [--codename NAME] [--comp-level N]
+sudo ./mkramsys init [--boot-dir DIR] [--mirror URL] [--codename NAME] [--comp-level N] <output.sqfs>
 ```
 
 Creates a standalone Debian squashfs image via debootstrap. Installs a kernel,
@@ -72,7 +72,6 @@ No session is created — this is a pure image builder.
 
 | Option         | Description                                            |
 |----------------|--------------------------------------------------------|
-| `-o FILE`      | Output squashfs path (required)                        |
 | `--boot-dir`   | Directory for kernel + initramfs (default: `boot/` alongside output) |
 | `--mirror`     | Debian mirror (default: `https://deb.debian.org/debian/`) |
 | `--codename`   | Debian release (default: `trixie`)                     |
@@ -81,7 +80,7 @@ No session is created — this is a pure image builder.
 ### open
 
 ```bash
-sudo ./mkramsys open <sqfs-path> [--force]
+sudo ./mkramsys open [--force] <sqfs-path>
 ```
 
 Starts a session on an existing squashfs file. Creates a session directory
@@ -137,7 +136,7 @@ sudo ./mkramsys shell [-c CMD] [-l] [SCRIPT [ARGS...]]
 ### build
 
 ```bash
-sudo ./mkramsys build -o <output.sqfs> [--comp-level N]
+sudo ./mkramsys build [--comp-level N] <output.sqfs>
 ```
 
 Snapshots the current overlay state as a squashfs image without running
@@ -145,13 +144,12 @@ cleansys. The session remains active for further modifications.
 
 | Option         | Description                            |
 |----------------|----------------------------------------|
-| `-o FILE`      | Output squashfs path (required)        |
 | `--comp-level` | zstd compression level (default: `15`) |
 
 ### commit
 
 ```bash
-sudo ./mkramsys commit -o <output.sqfs> [--comp-level N]
+sudo ./mkramsys commit [--comp-level N] <output.sqfs>
 ```
 
 Runs `cleansys --full` inside the chroot and from the host, creates the final
@@ -160,7 +158,6 @@ session directory and `.mkramsys-session` are deleted.
 
 | Option         | Description                            |
 |----------------|----------------------------------------|
-| `-o FILE`      | Output squashfs path (required)        |
 | `--comp-level` | zstd compression level (default: `15`) |
 
 ### reset
@@ -189,17 +186,17 @@ separate concerns:
 
 ```bash
 # Create → open → modify → finalize
-sudo ./mkramsys init -o base.sqfs
+sudo ./mkramsys init base.sqfs
 sudo ./mkramsys open base.sqfs
 sudo ./mkramsys install vim
-sudo ./mkramsys commit -o final.sqfs
+sudo ./mkramsys commit final.sqfs
 
 # Or: snapshot without closing, keep working
 sudo ./mkramsys open base.sqfs
 sudo ./mkramsys install vim
-sudo ./mkramsys build -o snapshot.sqfs    # session stays active
+sudo ./mkramsys build snapshot.sqfs    # session stays active
 sudo ./mkramsys install curl
-sudo ./mkramsys commit -o final.sqfs      # cleansys + close
+sudo ./mkramsys commit final.sqfs      # cleansys + close
 ```
 
 Session discovery: `open` writes `.mkramsys-session` in the current directory.

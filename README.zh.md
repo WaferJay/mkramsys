@@ -11,7 +11,7 @@ squashfs 镜像，启动后整个系统运行在内存中，使用 overlayfs 提
 
 ```bash
 # 构建基础镜像
-sudo ./mkramsys init -o base.sqfs
+sudo ./mkramsys init base.sqfs
 
 # 打开会话进行定制
 sudo ./mkramsys open base.sqfs
@@ -19,7 +19,7 @@ sudo ./mkramsys install vim curl openssh-server
 sudo ./mkramsys driver          # 自动检测并安装固件
 
 # 生成最终 squashfs 并关闭会话
-sudo ./mkramsys commit -o system.sqfs
+sudo ./mkramsys commit system.sqfs
 ```
 
 使用 `boot/` 中的内核和 initramfs 启动：
@@ -59,7 +59,7 @@ mkramsys [-w DIR] <command> [options]
 ### init
 
 ```bash
-sudo ./mkramsys init -o <output.sqfs> [--boot-dir DIR] [--mirror URL] [--codename NAME] [--comp-level N]
+sudo ./mkramsys init [--boot-dir DIR] [--mirror URL] [--codename NAME] [--comp-level N] <output.sqfs>
 ```
 
 通过 debootstrap 创建独立的 Debian squashfs 镜像。安装内核、生成包含 ramsys
@@ -69,7 +69,6 @@ sudo ./mkramsys init -o <output.sqfs> [--boot-dir DIR] [--mirror URL] [--codenam
 
 | 选项           | 说明                                                   |
 |----------------|--------------------------------------------------------|
-| `-o FILE`      | 输出 squashfs 路径（必填）                             |
 | `--boot-dir`   | 内核 + initramfs 目录（默认：输出文件旁的 `boot/`）    |
 | `--mirror`     | Debian 镜像源（默认：`https://deb.debian.org/debian/`）|
 | `--codename`   | Debian 发行版代号（默认：`trixie`）                    |
@@ -78,7 +77,7 @@ sudo ./mkramsys init -o <output.sqfs> [--boot-dir DIR] [--mirror URL] [--codenam
 ### open
 
 ```bash
-sudo ./mkramsys open <sqfs-path> [--force]
+sudo ./mkramsys open [--force] <sqfs-path>
 ```
 
 在已有 squashfs 文件上启动会话。创建会话目录（默认在 `/tmp`，可用 `-w` 覆盖），
@@ -130,7 +129,7 @@ sudo ./mkramsys shell [-c CMD] [-l] [SCRIPT [ARGS...]]
 ### build
 
 ```bash
-sudo ./mkramsys build -o <output.sqfs> [--comp-level N]
+sudo ./mkramsys build [--comp-level N] <output.sqfs>
 ```
 
 将当前 overlay 状态快照为 squashfs 镜像，不执行 cleansys。会话保持活跃，
@@ -138,13 +137,12 @@ sudo ./mkramsys build -o <output.sqfs> [--comp-level N]
 
 | 选项           | 说明                           |
 |----------------|--------------------------------|
-| `-o FILE`      | 输出 squashfs 路径（必填）     |
 | `--comp-level` | zstd 压缩级别（默认：`15`）    |
 
 ### commit
 
 ```bash
-sudo ./mkramsys commit -o <output.sqfs> [--comp-level N]
+sudo ./mkramsys commit [--comp-level N] <output.sqfs>
 ```
 
 在 chroot 内和宿主机侧执行 `cleansys --full`，生成最终 squashfs 镜像，
@@ -152,7 +150,6 @@ sudo ./mkramsys commit -o <output.sqfs> [--comp-level N]
 
 | 选项           | 说明                           |
 |----------------|--------------------------------|
-| `-o FILE`      | 输出 squashfs 路径（必填）     |
 | `--comp-level` | zstd 压缩级别（默认：`15`）    |
 
 ### reset
@@ -179,17 +176,17 @@ sudo ./mkramsys close [--force]
 
 ```bash
 # 创建 → 打开 → 修改 → 终结
-sudo ./mkramsys init -o base.sqfs
+sudo ./mkramsys init base.sqfs
 sudo ./mkramsys open base.sqfs
 sudo ./mkramsys install vim
-sudo ./mkramsys commit -o final.sqfs
+sudo ./mkramsys commit final.sqfs
 
 # 或者：快照但不关闭，继续工作
 sudo ./mkramsys open base.sqfs
 sudo ./mkramsys install vim
-sudo ./mkramsys build -o snapshot.sqfs    # 会话保持活跃
+sudo ./mkramsys build snapshot.sqfs    # 会话保持活跃
 sudo ./mkramsys install curl
-sudo ./mkramsys commit -o final.sqfs      # cleansys + 关闭
+sudo ./mkramsys commit final.sqfs      # cleansys + 关闭
 ```
 
 会话发现机制：`open` 在当前目录写入 `.mkramsys-session`，后续命令读取此文件
