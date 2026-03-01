@@ -1,6 +1,6 @@
 #!/bin/bash
 # cmd_init.sh — Create a standalone Debian squashfs image via debootstrap
-# Sourced by mkramsys dispatcher. Entry point: cmd_run -o <output.sqfs> [options]
+# Sourced by mkramsys dispatcher. Entry point: cmd_run <output.sqfs> [options]
 # No session is created — this is a pure image builder.
 
 cmd_run() {
@@ -11,28 +11,30 @@ cmd_run() {
     local comp_level=15
     while [ $# -gt 0 ]; do
         case "$1" in
-            -o) shift; output="${1:?'-o' requires a filename}" ;;
             --boot-dir) shift; boot_dir="${1:?'--boot-dir' requires a directory}" ;;
             --mirror)  [ -n "${2:-}" ] || die "init: --mirror requires an argument"; mirror="$2"; shift ;;
             --codename) [ -n "${2:-}" ] || die "init: --codename requires an argument"; codename="$2"; shift ;;
             --comp-level) [ -n "${2:-}" ] || die "init: --comp-level requires a value"; comp_level="$2"; shift ;;
             -h|--help)
                 cat <<EOF
-Usage: mkramsys init -o <output.sqfs> [options]
-  -o FILE        Output squashfs path (required)
-  --boot-dir DIR Directory for kernel + initramfs (default: boot/ alongside -o)
+Usage: mkramsys init [options] <output.sqfs>
+  --boot-dir DIR Directory for kernel + initramfs (default: boot/ alongside output)
   --mirror URL   Debian mirror (default: https://deb.debian.org/debian/)
   --codename     Debian release (default: trixie)
   --comp-level N zstd compression level (default: 15)
 EOF
                 exit 0
                 ;;
-            *) die "init: unknown option '$1'" ;;
+            -*) die "init: unknown option '$1'" ;;
+            *)
+                [ -n "$output" ] && die "init: unexpected argument '$1'"
+                output="$1"
+                ;;
         esac
         shift
     done
 
-    [ -z "$output" ] && die "init: -o <output.sqfs> is required"
+    [ -z "$output" ] && die "init: <output.sqfs> is required"
 
     # Resolve output to absolute path
     output="$(readlink -f "$output")"

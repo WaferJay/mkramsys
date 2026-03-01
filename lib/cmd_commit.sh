@@ -1,6 +1,6 @@
 #!/bin/bash
 # cmd_commit.sh — Finalize: cleansys + squashfs + close session
-# Sourced by mkramsys dispatcher. Entry point: cmd_run -o <output.sqfs>
+# Sourced by mkramsys dispatcher. Entry point: cmd_run <output.sqfs>
 
 cmd_run() {
     local output=""
@@ -8,12 +8,10 @@ cmd_run() {
 
     while [ $# -gt 0 ]; do
         case "$1" in
-            -o) shift; output="${1:?'-o' requires a filename}" ;;
             --comp-level) shift; comp_level="${1:?'--comp-level' requires a value}" ;;
             -h|--help)
                 cat <<EOF
-Usage: mkramsys commit -o <output.sqfs> [--comp-level N]
-  -o FILE        Output squashfs path (required)
+Usage: mkramsys commit [--comp-level N] <output.sqfs>
   --comp-level N zstd compression level (default: 15)
 
 Runs cleansys, creates final squashfs, and closes the session.
@@ -21,12 +19,16 @@ This is a terminal operation — the session is deleted after commit.
 EOF
                 exit 0
                 ;;
-            *) die "commit: unknown option '$1'" ;;
+            -*) die "commit: unknown option '$1'" ;;
+            *)
+                [ -n "$output" ] && die "commit: unexpected argument '$1'"
+                output="$1"
+                ;;
         esac
         shift
     done
 
-    [ -z "$output" ] && die "commit: -o <output.sqfs> is required"
+    [ -z "$output" ] && die "commit: <output.sqfs> is required"
 
     require_root
     require_cmd mksquashfs

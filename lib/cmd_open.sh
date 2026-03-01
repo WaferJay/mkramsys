@@ -11,8 +11,7 @@ cmd_run() {
             --force) force=1 ;;
             -h|--help)
                 cat <<EOF
-Usage: mkramsys open <sqfs-path> [--force]
-  <sqfs-path>  Path to an existing squashfs image
+Usage: mkramsys open [--force] <sqfs-path>
   --force      Overwrite existing session marker
 EOF
                 exit 0
